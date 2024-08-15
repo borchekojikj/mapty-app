@@ -60,11 +60,12 @@ const inputElevation = document.querySelector('.form__input--elevation');
 
 // Geolocation API
 let map, mapEvent;
+const workouts = [];
 
 class App {
     #map;
     #mapEvent;
-
+    #workouts = [];
     constructor() {
         this._getPosition();
         form.addEventListener('submit', this._newWorkout.bind(this));
@@ -111,37 +112,150 @@ class App {
     }
 
     _newWorkout(e) {
+        const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
+        const allPositive = (...inputs) => inputs.every(inp => inp > 0);
         e.preventDefault();
 
-        // Display marker
+
+        // Get Data from form
+        const type = inputType.value;
+        const distance = Number(inputDistance.value);
+        const duration = Number(inputDuration.value);
+        const { lat, lng } = this.#mapEvent.latlng;
+
+
+        let workout;
+        // If workout running, create running object
+        if (type === 'running') {
+            const cadence = Number(inputCadence.value);
+
+            // Check if data is valid
+            // if (
+            //     !Number.isFinite(distance) ||
+            //     !Number.isFinite(duration) ||
+            //     !Number.isFinite(cadence)
+            // )
+            //     return alert('Inputs have to be positive numbers!');
+            // Check if data is valid
+
+            if (
+                !validInputs(distance, duration, cadence) ||
+                !allPositive(distance, distance, cadence)
+            ) {
+                return alert('Inputs have to be positive numbers!');
+            }
+
+            workout = new Running([lat, lng], distance, duration, cadence);
+
+        }
+        // If workout cycliin, create cyclung object
+        if (type === 'cycling') {
+            const elevationGain = Number(inputElevation.value);
+
+            // Check if data is valid
+            if (
+                !validInputs(distance, duration, elevationGain) ||
+                !allPositive(distance, distance)
+            ) {
+                return alert('Inputs have to be positive numbers!');
+            }
+
+
+            workout = new Cycling([lat, lng], distance, duration, elevationGain);
+        };
+
+        // Add new object to wrokout array
+        this.#workouts.push(workout);
+
+
+        // Render workout list
+
+        // Hide from + clear input fields
+
+
+        // Render workout on map as marker
+        console.log(workout);
+        this.renderWorkoutMarker(workout);
 
         // Clear value
         inputDistance.value = inputCadence.value = inputElevation.value = inputDuration.value = '';
 
         // console.log(this.#mapEvent);
 
-        const { lat, lng } = this.#mapEvent.latlng;
 
 
-        L.marker([lat, lng]).addTo(this.#map)
+
+
+
+    }
+
+    renderWorkoutMarker(workout) {
+        L.marker(workout.coords).addTo(this.#map)
             .bindPopup(L.popup({
                 maxWidth: 250,
                 minWidth: 100,
                 autoClose: false,
                 closeOnClick: false,
-                className: 'running-popup'
+                className: `${workout.type}-popup`
             })).setPopupContent('Workout')
             .openPopup();
     }
-}
+
+
+};
+
+
+class Workout {
+    date = new Date();
+    id = (Date.now() + '').slice(-10);
+    constructor(coords, distance, duration) {
+        // this.date = ...
+        // this.id = ...
+        this.coords = coords; // [lat,lng]
+        this.distance = distance; // in km
+        this.duration = duration; // in min
+    }
+};
+
+
+class Running extends Workout {
+    type = 'running';
+    constructor(coords, distance, duration, cadence) {
+        super(coords, distance, duration);
+        this.cadence = cadence;
+        this.calcPace();
+    }
+
+    calcPace() {
+        // min/km
+        this.pace = this.duration / this.distance;
+        return this.pace;
+    }
+};
+
+class Cycling extends Workout {
+    type = 'cycling';
+    constructor(coords, distance, duration, elevationGain) {
+        super(coords, distance, duration);
+        this.cadence = elevationGain;
+        this.caclSpeed();
+    }
+
+
+    caclSpeed() {
+        this.speed = this.distance / (this.duration / 60);
+        return this.speed;
+    }
+};
 
 const app = new App();
 
 
 
+// const run1 = new Running([39, -12], 5.2, 24, 187);
+// const cuc1 = new Cycling([39, -12], 27, 95, 523);
 
-
+// console.log(run1, cuc1);
 // https://www.google.com/maps/@42.0088748,21.3918047,15z?entry=ttu
 
 
-// Displ
